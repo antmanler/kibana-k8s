@@ -48,7 +48,7 @@ set | grep -i elasticsearch
 # code in the configuration for nginx. If a Kubernetes Elasticsearch
 # service called 'elasticsearch' is defined, use that. Otherwise, use
 # a local instance of Elasticsearch on port 9200.
-PROXY_HOST=${ELASTICSEARCH_SERVICE_HOST:-127.0.0.1}
+PROXY_HOST=${ELASTICSEARCH_SERVICE_HOST:-elasticsearch}
 echo PROXY_HOST=${PROXY_HOST}
 PROXY_PORT=${ELASTICSEARCH_SERVICE_PORT:-9200}
 echo PROXY_PORT=${PROXY_PORT}
@@ -149,6 +149,9 @@ EOF
 # Proxy all calls to ...:80/elasticsearch to the location
 # defined by http://${PROXY_HOST}:${PROXY_PORT}
 cat <<EOF > /etc/nginx/sites-enabled/default
+upstream upstream-es {
+    server ${PROXY_HOST}:${PROXY_PORT};
+}
 server {
         listen 80 default_server;
         listen [::]:80 default_server ipv6only=on;
@@ -170,7 +173,7 @@ server {
                 proxy_set_header Upgrade \$http_upgrade;
                 proxy_read_timeout 1d;
                 proxy_set_header Connection "upgrade";
-                proxy_pass http://${PROXY_HOST}:${PROXY_PORT}/\$1\$is_args\$args;
+                proxy_pass http://upstream-es/\$1\$is_args\$args;
         }
 }
 EOF
